@@ -340,6 +340,7 @@ List<Map<String, dynamic>> lieuxData = [];
 int streakJours = 3;
 int pointsTotal = 47;
 String nomUtilisateur = 'Moi';
+String quartierUtilisateur = 'Abidjan';
 String _getNiveau(int points) {
   if (points >= 500) return '🏆 Expert ZoWay';
   if (points >= 300) return '⭐ Guide local';
@@ -457,6 +458,8 @@ final List<Map<String, dynamic>> _typesAlertes = [
   {'type': 'Pénurie carburant', 'emoji': '⛽', 'couleur': Colors.brown},
   {'type': 'Nid de poule', 'emoji': '🕳️', 'couleur': Colors.grey},
   {'type': 'Arbre tombé', 'emoji': '🌳', 'couleur': Colors.green},
+  {'type': 'Contrôle radar', 'emoji': '📡', 'couleur': Colors.indigo},
+  {'type': 'Coupeur de route', 'emoji': '🔪', 'couleur': Colors.red},
 ];
   @override
 void initState() {
@@ -1667,10 +1670,15 @@ class _PodiumItem extends StatelessWidget {
 }
 
 // ── PROFIL ──
-class ProfilScreen extends StatelessWidget {
+class ProfilScreen extends StatefulWidget {
   final void Function(int pts) onPointsAdded;
   const ProfilScreen({super.key, required this.onPointsAdded});
 
+  @override
+  State<ProfilScreen> createState() => _ProfilScreenState();
+}
+
+class _ProfilScreenState extends State<ProfilScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1712,8 +1720,11 @@ class ProfilScreen extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
-  Text(nomUtilisateur, style: const TextStyle(color: Colors.white,
-    fontSize: 17, fontWeight: FontWeight.w600)),
+  Flexible(
+    child: Text(nomUtilisateur, style: const TextStyle(color: Colors.white,
+      fontSize: 17, fontWeight: FontWeight.w600),
+      overflow: TextOverflow.ellipsis),
+  ),
   const SizedBox(width: 8),
   GestureDetector(
     onTap: () {
@@ -1756,9 +1767,53 @@ class ProfilScreen extends StatelessWidget {
     },
     child: const Icon(Icons.edit, color: Colors.white70, size: 16),
   ),
+  const SizedBox(width: 8),
+  GestureDetector(
+  onTap: () {
+    final controller = TextEditingController(text: quartierUtilisateur);
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Ma localité'),
+        content: TextField(
+          controller: controller,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            hintText: 'Ex: Daloa, Cocody, Yopougon...',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF6B00),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final nouveau = controller.text.trim();
+              if (nouveau.isNotEmpty) {
+                setState(() {
+                  quartierUtilisateur = nouveau;
+                });
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Sauvegarder'),
+          ),
+        ],
+      ),
+    );
+  },
+  child: const Icon(Icons.location_on, color: Colors.white70, size: 16),
+  ),
 ]),
                   const SizedBox(height: 3),
-                  Text('${_getNiveau(pointsTotal)} · Cocody',
+                  Text('${_getNiveau(pointsTotal)} · $quartierUtilisateur',
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 6),
                   // Streak dans le profil
