@@ -1320,7 +1320,6 @@ class _NommerSheet extends StatefulWidget {
 }
 
 // ── VALIDER ──
-// ── VALIDER ──
 class ValiderScreen extends StatefulWidget {
   const ValiderScreen({super.key});
   @override
@@ -1688,16 +1687,64 @@ class ProfilScreen extends StatelessWidget {
                   color: Colors.white.withOpacity(0.25),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: const Center(
-                  child: Text('KA', style: TextStyle(color: Colors.white,
+                child: Center(
+                  child: Text(
+                    nomUtilisateur.length >= 2
+                      ? nomUtilisateur.substring(0, 2).toUpperCase()
+                      : nomUtilisateur.toUpperCase(),
+                    style: TextStyle(color: Colors.white,
                     fontSize: 18, fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(nomUtilisateur, style: TextStyle(color: Colors.white,
-                    fontSize: 17, fontWeight: FontWeight.w600)),
+                  Row(children: [
+  Text(nomUtilisateur, style: const TextStyle(color: Colors.white,
+    fontSize: 17, fontWeight: FontWeight.w600)),
+  const SizedBox(width: 8),
+  GestureDetector(
+    onTap: () {
+      final controller = TextEditingController(text: nomUtilisateur);
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Modifier le pseudo'),
+          content: TextField(
+            controller: controller,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              hintText: 'Ton pseudo...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6B00),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                final nouveau = controller.text.trim();
+                if (nouveau.isNotEmpty) {
+                  nomUtilisateur = nouveau;
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Sauvegarder'),
+            ),
+          ],
+        ),
+      );
+    },
+    child: const Icon(Icons.edit, color: Colors.white70, size: 16),
+  ),
+]),
                   const SizedBox(height: 3),
                   const Text('🗺️ Passant · Cocody',
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
