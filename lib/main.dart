@@ -423,7 +423,7 @@ class CarteScreen extends StatefulWidget {
 class _CarteScreenState extends State<CarteScreen> {
   final MapController _mapController = MapController();
   LatLng? _selectedPoint;
-  LatLng _maPosition = const LatLng(5.3600, -3.9800);
+  LatLng _maPosition = const LatLng(5.3569, -3.9464);
   bool _gpsCharge = false;
   double _vitesse = 0.0;
   double _precision = 0.0;
@@ -545,7 +545,11 @@ Future<void> _chargerAlertes() async {
           _precision = pos.accuracy;
           _gpsCharge = true;
         });
-        _mapController.move(_maPosition, 15);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+       Future.delayed(const Duration(milliseconds: 300), () {
+         if (mounted) _mapController.move(_maPosition, 15);
+       });
+     });
       }
 
       // Suivi en temps réel
@@ -806,11 +810,28 @@ setState(() {
           ),
         ],
       ),
-      body: Stack(children: [
+      body: !_gpsCharge
+  ? Container(
+      color: Colors.white,
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ZoWayLogo(size: 80),
+            SizedBox(height: 20),
+            CircularProgressIndicator(color: Color(0xFFFF6B00)),
+            SizedBox(height: 16),
+            Text('Localisation en cours…',
+              style: TextStyle(fontSize: 14, color: Colors.grey)),
+          ],
+        ),
+      ),
+    )
+  : Stack(children: [
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: _maPosition,
+            initialCenter: _maPosition ?? const LatLng(5.3569, -3.9464),
             initialZoom: 15,
             maxZoom: 19,
             minZoom: 10,
@@ -915,25 +936,6 @@ setState(() {
           ],
         ),
 
-        if (!_gpsCharge)
-          Positioned(
-            top: 8, left: 12, right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black12)],
-              ),
-              child: const Row(children: [
-                SizedBox(width: 16, height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0F8A5F))),
-                SizedBox(width: 10),
-                Text('Localisation en cours…',
-                  style: TextStyle(fontSize: 13, color: Colors.grey)),
-              ]),
-            ),
-          ),
 Positioned(
   bottom: 160, right: 16,
   child: _BoutonAlertePulsant(
@@ -1073,7 +1075,6 @@ Positioned(
           ),
         ),
       ]),
-
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF0F8A5F),
         foregroundColor: Colors.white,
