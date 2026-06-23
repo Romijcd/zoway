@@ -340,6 +340,13 @@ List<Map<String, dynamic>> lieuxData = [];
 int streakJours = 3;
 int pointsTotal = 47;
 String nomUtilisateur = 'Moi';
+String _getNiveau(int points) {
+  if (points >= 500) return '🏆 Expert ZoWay';
+  if (points >= 300) return '⭐ Guide local';
+  if (points >= 150) return '🧭 Mappeur';
+  if (points >= 50)  return '📍 Explorateur';
+  return '🗺️ Passant';
+}
 DateTime derniereConnexion = DateTime.now();
 
 // Classement quartier
@@ -351,7 +358,7 @@ final List<Map<String, dynamic>> classement = [
   {'nom': 'Aya D.', 'quartier': 'Cocody', 'points': 156, 'niveau': '📍 Explorateur'},
   {'nom': 'Koffi B.', 'quartier': 'Cocody', 'points': 134, 'niveau': '📍 Explorateur'},
   {'nom': 'Adjoua S.', 'quartier': 'Cocody', 'points': 98, 'niveau': '📍 Explorateur'},
-  {'nom': nomUtilisateur, 'quartier': 'Cocody', 'points': 47, 'niveau': '🗺️ Passant', 'moi': true},
+  {'nom': nomUtilisateur, 'quartier': 'Cocody', 'points': pointsTotal, 'niveau': _getNiveau(pointsTotal), 'moi': true},
 ];
 
 // ── HOME ──
@@ -1440,6 +1447,10 @@ class ClassementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Mettre à jour les points de l'utilisateur et trier
+    classement.firstWhere((j) => j['moi'] == true)['points'] = pointsTotal;
+    classement.firstWhere((j) => j['moi'] == true)['niveau'] = _getNiveau(pointsTotal);
+    classement.sort((a, b) => (b['points'] as int).compareTo(a['points'] as int));
     return Scaffold(
       appBar: AppBar(
         title: const Text('Classement Cocody',
@@ -1746,7 +1757,7 @@ class ProfilScreen extends StatelessWidget {
   ),
 ]),
                   const SizedBox(height: 3),
-                  const Text('🗺️ Passant · Cocody',
+                  Text('${_getNiveau(pointsTotal)} · Cocody',
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 6),
                   // Streak dans le profil
