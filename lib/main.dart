@@ -1092,7 +1092,7 @@ Future<void> _soumettreNouveauLieu(String nom, String type, String description, 
        'nom': nom, 'type': type,
   'description': description,
   'lat': point.latitude, 'lng': point.longitude,
-  'par': 'Moi',
+  'par': nomUtilisateur,
 }),
       );
       await _chargerLieux();
@@ -1162,7 +1162,7 @@ Future<void> _soumettreAlerte(String type) async {
         'type': type,
         'lat': _maPosition.latitude,
         'lng': _maPosition.longitude,
-        'par': 'Moi',
+        'par': nomUtilisateur,
       }),
     );
     await _chargerAlertes();
@@ -1771,7 +1771,7 @@ class ProfilScreen extends StatelessWidget {
             _StatCard(label: 'Nommés',
               value: '${lieuxData.where((l) => l['par'] == 'Moi').length}'),
             const SizedBox(width: 10),
-            const _StatCard(label: 'Validés', value: '0'),
+            _StatCard(label: 'Validés', value: '${lieuxData.where((l) => l['par'] == nomUtilisateur && l['status'] == 'validated').length}'),
             const SizedBox(width: 10),
             _StatCard(label: 'Points', value: '$pointsTotal'),
           ]),
