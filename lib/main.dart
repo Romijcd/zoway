@@ -577,6 +577,9 @@ Future<void> _chargerAlertes() async {
           });
           if (_navigationActive) {
             _mapController.move(_maPosition, 17);
+            if (_direction != null) {
+              _mapController.rotate(-_direction!);
+            }
           }
         }
       });
