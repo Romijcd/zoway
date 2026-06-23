@@ -852,9 +852,9 @@ setState(() {
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'ci.ZoWay.app',
-            ),
+  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  userAgentPackageName: 'ci.ZoWay.app',
+),
             if (_itineraire.isNotEmpty)
              PolylineLayer(
               polylines: [
