@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_polyline_algorithm/google_polyline_algorithm.dart';
 import 'dart:async';
+import 'package:flutter_compass/flutter_compass.dart';
 const String kBaseUrl = 'https://konomap-backend-production.up.railway.app';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -426,6 +427,7 @@ class _CarteScreenState extends State<CarteScreen> {
   LatLng? _selectedPoint;
   LatLng _maPosition = const LatLng(5.3569, -3.9464);
   bool _gpsCharge = false;
+  double? _direction = 0;
   double _vitesse = 0.0;
   double _precision = 0.0;
   StreamSubscription<Position>? _positionStream;
@@ -464,9 +466,14 @@ final List<Map<String, dynamic>> _typesAlertes = [
   @override
 void initState() {
   super.initState();
-  _initLocation();
-  _chargerLieux();
-  _chargerAlertes(); // ← ajoute juste cette ligne
+_initLocation();
+_chargerLieux();
+_chargerAlertes();
+FlutterCompass.events!.listen((event) {
+  if (mounted) {
+    setState(() => _direction = event.heading);
+  }
+});
 }
 Future<void> _calculerItineraire(LatLng destination) async {
   try {
@@ -1017,6 +1024,28 @@ if (_navigationActive && _distanceInfo.isNotEmpty)
       ]),
     ),
   ),
+Positioned(
+  bottom: 280, right: 16,
+  child: GestureDetector(
+    onTap: () {
+      if (_direction != null) {
+        _mapController.rotate(-_direction!);
+      }
+    },
+    child: Container(
+      width: 44, height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+      ),
+      child: Transform.rotate(
+        angle: ((_direction ?? 0) * 3.14159 / 180),
+        child: const Icon(Icons.navigation, color: Color(0xFFFF6B00), size: 24),
+      ),
+    ),
+  ),
+), 
 Positioned(
   bottom: 220, right: 16,
   child: FloatingActionButton.small(
