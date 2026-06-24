@@ -427,6 +427,7 @@ class _CarteScreenState extends State<CarteScreen> {
   LatLng? _selectedPoint;
   LatLng _maPosition = const LatLng(5.3569, -3.9464);
   bool _gpsCharge = false;
+  String _filtreType = 'Tous';
   double? _direction = 0;
   double _vitesse = 0.0;
   double _precision = 0.0;
@@ -913,7 +914,7 @@ setState(() {
     ),
   );
 }).toList(),
-              ...lieuxData.map((lieu) => Marker(
+              ...lieuxData.where((lieu) => _filtreType == 'Tous' || lieu['type'] == _filtreType).map((lieu) => Marker(
                 point: LatLng(lieu['lat'], lieu['lng']),
                 width: 36, height: 44,
                 child: GestureDetector(
@@ -956,7 +957,36 @@ Positioned(
   ),
 ),
 Positioned(
-  top: 60, left: 16,
+  top: 8, left: 16, right: 16,
+  child: SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(children: [
+      for (final type in ['Tous', 'Carrefour', 'Rue', 'Quartier', 'Monument', 'Commerce'])
+        GestureDetector(
+          onTap: () => setState(() => _filtreType = type),
+          child: Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _filtreType == type
+                ? const Color(0xFFFF6B00)
+                : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
+            ),
+            child: Text(type,
+              style: TextStyle(
+                color: _filtreType == type ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              )),
+          ),
+        ),
+    ]),
+  ),
+),
+Positioned(
+  top: 52, left: 16,
   child: Container(
     width: MediaQuery.of(context).size.width * 0.7,
     decoration: BoxDecoration(
