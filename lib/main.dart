@@ -1012,27 +1012,15 @@ Positioned(
     ),
   ),
 ),
-// Logo ZoWay bas gauche
+// ZoWay texte transparent bas gauche
 Positioned(
-  bottom: 10, left: 16,
-  child: Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.3),
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
-    ),
-    child: Row(mainAxisSize: MainAxisSize.min, children: [
-      const ZoWayLogo(size: 18),
-      const SizedBox(width: 6),
-      Text('ZoWay',
+  bottom: 10, left: 15,
+  child: Text('ZoWay',
     style: GoogleFonts.nunito(
-    fontWeight: FontWeight.w800,
-    fontSize: 14,
-    color: const Color(0xFFFF6B00),
-  )),
-    ]),
-  ),
+      fontWeight: FontWeight.w900,
+      fontSize: 16,
+      color: const Color(0xFFFF6B00).withOpacity(0.9),
+    )),
 ),
 if (_navigationActive && _distanceInfo.isNotEmpty)
   Positioned(
