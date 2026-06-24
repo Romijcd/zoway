@@ -1153,16 +1153,37 @@ Positioned(
   }
 Future<void> _soumettreNouveauLieu(String nom, String type, String description, LatLng point) async {
   try {
-    await http.post(
+    // Récupérer la ville via GPS
+    String ville = 'Inconnue';
+    try {
+      final geoUrl = 'https://nominatim.openstreetmap.org/reverse'
+        '?lat=${point.latitude}&lon=${point.longitude}&format=json';
+      final geoResponse = await http.get(Uri.parse(geoUrl),
+        headers: {'User-Agent': 'ZoWay/1.0'});
+      final geoData = jsonDecode(geoResponse.body);
+      ville = geoData['address']['city']
+        ?? geoData['address']['town']
+        ?? geoData['address']['village']
+        ?? 'Inconnue';
+    } catch (e) {
+      debugPrint('Erreur géocodage: $e');
+    }
+
+    final response = await http.post(
       Uri.parse('$kBaseUrl/lieux'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-       'nom': nom, 'type': type,
-  'description': description,
-  'lat': point.latitude, 'lng': point.longitude,
-  'par': nomUtilisateur,
-}),
-      );
+        'nom': nom,
+        'type': type,
+        'description': description,
+        'lat': point.latitude,
+        'lng': point.longitude,
+        'par': nomUtilisateur,
+        'ville': ville,
+        'categorie': type,
+        'sous_categorie': type,
+      }),
+    );
       await _chargerLieux();
     } catch (e) {
       debugPrint('Erreur soumission: $e');
