@@ -1004,6 +1004,19 @@ Positioned(
       onSubmitted: (valeur) async {
         if (valeur.isEmpty) return;
         try {
+          // Chercher d'abord dans les lieux ZoWay
+          final lieuZoWay = lieuxData.where((l) =>
+            l['nom'].toString().toLowerCase()
+              .contains(valeur.toLowerCase())).toList();
+          if (lieuZoWay.isNotEmpty) {
+            final lieu = lieuZoWay.first;
+            final dest = LatLng(lieu['lat'], lieu['lng']);
+            await _calculerItineraire(dest);
+            _mapController.move(dest, 15);
+            if (mounted) setState(() {});
+            return;
+          }
+          // Sinon chercher sur Nominatim
           final url = 'https://nominatim.openstreetmap.org/search'
             '?q=${Uri.encodeComponent(valeur)}&format=json&limit=1&countrycodes=ci';
           final response = await http.get(Uri.parse(url),
@@ -1015,6 +1028,7 @@ Positioned(
             final dest = LatLng(lat, lon);
             await _calculerItineraire(dest);
             _mapController.move(dest, 14);
+            if (mounted) setState(() {});
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Adresse non trouvée')));
