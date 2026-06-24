@@ -11,6 +11,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_polyline_algorithm/google_polyline_algorithm.dart';
 import 'dart:async';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 const String kBaseUrl = 'https://konomap-backend-production.up.railway.app';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +29,7 @@ class ZoWayApp extends StatelessWidget {
       title: 'ZoWay',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        fontFamily: GoogleFonts.nunito().fontFamily,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F8A5F)),
         useMaterial3: true,
       ),
@@ -793,37 +796,6 @@ setState(() {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(children: [
-          const ZoWayLogo(size: 28),
-          const SizedBox(width: 8),
-          const Text('ZoWay',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-        ]),
-        actions: [
-          // Streak
-          Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: Chip(
-              backgroundColor: const Color(0xFFFFF3E0),
-              label: Text('🔥 $streakJours',
-                style: const TextStyle(color: Color(0xFFE65100),
-                  fontWeight: FontWeight.w700, fontSize: 13)),
-            ),
-          ),
-          // Points
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Chip(
-              backgroundColor: const Color(0xFFE8F7F2),
-              label: Text('$pointsTotal pts',
-                style: const TextStyle(color: Color(0xFF0F8A5F),
-                  fontWeight: FontWeight.w600)),
-              avatar: const Icon(Icons.star, color: Color(0xFF0F8A5F), size: 16),
-            ),
-          ),
-        ],
-      ),
       body: !_gpsCharge
   ? Container(
       color: Colors.white,
@@ -1040,7 +1012,28 @@ Positioned(
     ),
   ),
 ),
-
+// Logo ZoWay bas gauche
+Positioned(
+  bottom: 10, left: 16,
+  child: Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.3),
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      const ZoWayLogo(size: 18),
+      const SizedBox(width: 6),
+      Text('ZoWay',
+    style: GoogleFonts.nunito(
+    fontWeight: FontWeight.w800,
+    fontSize: 14,
+    color: const Color(0xFFFF6B00),
+  )),
+    ]),
+  ),
+),
 if (_navigationActive && _distanceInfo.isNotEmpty)
   Positioned(
     bottom: 180, left: 16, right: 16,
