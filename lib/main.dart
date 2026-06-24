@@ -929,7 +929,7 @@ Positioned(
   ),
 ),
 Positioned(
-  top: 8, left: 16, right: 16,
+  top: 100, left: 16, right: 16,
   child: SingleChildScrollView(
     scrollDirection: Axis.horizontal,
     child: Row(children: [
@@ -958,9 +958,9 @@ Positioned(
   ),
 ),
 Positioned(
-  top: 52, left: 16,
+  top: 40, left: 12, right: 12,
   child: Container(
-    width: MediaQuery.of(context).size.width * 0.7,
+    width: double.infinity,
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
