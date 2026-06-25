@@ -1003,7 +1003,15 @@ setState(() {
     ),
   );
 }).toList(),
-              ...lieuxData.where((lieu) => _filtreType == 'Tous' || lieu['type'] == _filtreType).map((lieu) => Marker(
+              ...lieuxData.where((lieu) {
+  if (_filtreType == 'Tous') return true;
+  final sousCat = lieu['sous_categorie'] ?? lieu['type'];
+  final cat = lieu['categorie'] ?? '';
+  if (_filtreSousType != null) return sousCat == _filtreSousType;
+  final sousCats = _filtreIconesSous[_filtreType]?.keys.toList() ?? [];
+  if (sousCats.isNotEmpty) return sousCats.contains(sousCat) || cat == _filtreType;
+  return cat == _filtreType || sousCat == _filtreType;
+}).map((lieu) => Marker(
                 point: LatLng(lieu['lat'], lieu['lng']),
                 width: 36, height: 44,
                 child: GestureDetector(
@@ -1722,9 +1730,11 @@ final Map<String, IconData> _icones = {
               color: Colors.grey, letterSpacing: 0.5)),
           const SizedBox(height: 6),
           TextField(
-            controller: _nomController,
-            decoration: InputDecoration(
-              hintText: 'Ex: Carrefour Shell Riviera',
+           controller: _nomController,
+           decoration: InputDecoration(
+           hintText: _sousCategorie != null 
+             ? 'Ex: ${_sousCategorie!} ...' 
+             : 'Ex: Carrefour Shell Riviera',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -1814,7 +1824,10 @@ final Map<String, IconData> _icones = {
                 final nom = _nomController.text.trim();
                 if (nom.isEmpty) return;
                 final type = _sousCategorie ?? _categorie;
-                widget.onSubmit(nom, type, _descController.text.trim());
+                final nomComplet = _sousCategorie != null && !nom.startsWith(_sousCategorie!)
+                  ? '${_sousCategorie!} $nom'
+                  : nom;
+                widget.onSubmit(nomComplet, type, _descController.text.trim());
                 Navigator.pop(context);
               },
               child: const Text('Soumettre ce nom',
