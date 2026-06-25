@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -13,6 +14,7 @@ import 'dart:async';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui' as ui;
 const String kBaseUrl = 'https://konomap-backend-production.up.railway.app';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1013,26 +1015,58 @@ setState(() {
   return cat == _filtreType || sousCat == _filtreType;
 }).map((lieu) => Marker(
                 point: LatLng(lieu['lat'], lieu['lng']),
-                width: 36, height: 44,
+                width: 160, height: 55,
                 child: GestureDetector(
                   onTap: () => _ouvrirDetail(lieu),
-                  child: Column(children: [
-                    Container(
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(
-                        color: _statusColor(lieu['status']),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2.5),
-                        boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Nom composé à gauche
+                    Flexible(
+                      child: Text(
+                        lieu['nom'] ?? '',
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: _statusColor(lieu['status']),
+                          shadows: const [
+                            Shadow(blurRadius: 3, color: Colors.white, offset: Offset(1, 1)),
+                            Shadow(blurRadius: 3, color: Colors.white, offset: Offset(-1, 1)),
+                            Shadow(blurRadius: 3, color: Colors.white, offset: Offset(1, -1)),
+                            Shadow(blurRadius: 3, color: Colors.white, offset: Offset(-1, -1)),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      child: Icon(
-  _filtreIconesSous[lieu['categorie']]?[lieu['sous_categorie']] ??
-  _filtreIcones[lieu['categorie']] ??
-  Icons.place,
-  color: Colors.white, size: 16),
                     ),
-                    Container(width: 2, height: 8, color: _statusColor(lieu['status'])),
-                  ]),
+                    const SizedBox(width: 4),
+                    // Cercle + tige groupés et centrés ensemble
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 28, height: 28,
+                          decoration: BoxDecoration(
+                            color: _statusColor(lieu['status']),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.5),
+                            boxShadow: const [BoxShadow(blurRadius: 6, color: Colors.black38, spreadRadius: 1)],
+                          ),
+                          child: Icon(
+                            _filtreIconesSous[lieu['categorie']]?[lieu['sous_categorie']] ??
+                            _filtreIcones[lieu['categorie']] ??
+                            Icons.place,
+                            color: Colors.white, size: 14),
+                        ),
+                        // Tige noire, centrée sous le cercle
+                        Container(width: 2, height: 10, color: Colors.black87),
+                      ],
+                    ),
+                  ],
+                ),
                 ),
               )),
               if (_selectedPoint != null)
@@ -2652,4 +2686,20 @@ class _ZoWayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ZoWayPainter oldDelegate) => false;
+}
+class _PinTailPainter extends CustomPainter {
+  final Color color;
+  _PinTailPainter(this.color);
+  @override
+  void paint(ui.Canvas canvas, ui.Size size) {
+    final paint = ui.Paint()..color = color;
+    final path = ui.Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+  @override
+  bool shouldRepaint(_PinTailPainter old) => old.color != color;
 }
