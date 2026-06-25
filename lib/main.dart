@@ -1017,7 +1017,11 @@ setState(() {
                         border: Border.all(color: Colors.white, width: 2.5),
                         boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
                       ),
-                      child: const Icon(Icons.place, color: Colors.white, size: 16),
+                      child: Icon(
+  _filtreIconesSous[lieu['categorie']]?[lieu['sous_categorie']] ??
+  _filtreIcones[lieu['categorie']] ??
+  Icons.place,
+  color: Colors.white, size: 16),
                     ),
                     Container(width: 2, height: 8, color: _statusColor(lieu['status'])),
                   ]),
@@ -1212,7 +1216,7 @@ Positioned(
       ]),
     ),
   ],
-],
+  ],
   ),
 ),
 Positioned(
