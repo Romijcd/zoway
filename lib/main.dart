@@ -449,6 +449,104 @@ class _CarteScreenState extends State<CarteScreen> {
   'Nature': Icons.park,
   'Agriculture': Icons.grass,
 };
+final Map<String, Map<String, IconData>> _filtreIconesSous = {
+  'Localités': {
+    'Quartier': Icons.holiday_village,
+    'Sous-quartier': Icons.location_on,
+    'Village': Icons.cottage,
+    'Cité': Icons.apartment,
+    'Résidence': Icons.house,
+    'Campement': Icons.cabin,
+    'Hameau': Icons.location_on,
+  },
+  'Voirie': {
+    'Rue': Icons.turn_right,
+    'Avenue': Icons.add_road,
+    'Boulevard': Icons.add_road,
+    'Carrefour': Icons.swap_calls,
+    'Rond-point': Icons.roundabout_right,
+    'Impasse': Icons.block,
+    'Pont': Icons.directions,
+    'Passage': Icons.transfer_within_a_station,
+  },
+  'Lieux publics': {
+    'Mairie': Icons.account_balance,
+    'Préfecture': Icons.account_balance,
+    'Commissariat': Icons.local_police,
+    'Gendarmerie': Icons.local_police,
+    'Tribunal': Icons.gavel,
+  },
+  'Santé': {
+    'Hôpital': Icons.local_hospital,
+    'Clinique': Icons.medical_services,
+    'Pharmacie': Icons.medication,
+    'Maternité': Icons.child_care,
+  },
+  'Éducation': {
+    'École primaire': Icons.school,
+    'Collège': Icons.school,
+    'Lycée': Icons.school,
+    'Université': Icons.account_balance,
+    'Bibliothèque': Icons.menu_book,
+  },
+  'Religion': {
+    'Église': Icons.church,
+    'Mosquée': Icons.mosque,
+    'Temple': Icons.temple_buddhist,
+    'Cathédrale': Icons.church,
+  },
+  'Transport': {
+    'Gare routière': Icons.directions_bus,
+    'Arrêt bus': Icons.bus_alert,
+    'Gare ferroviaire': Icons.train,
+    'Port': Icons.directions_boat,
+    'Aéroport': Icons.flight,
+    'Station taxi': Icons.local_taxi,
+    'Parking': Icons.local_parking,
+  },
+  'Restauration': {
+    'Maquis': Icons.local_bar,
+    'Restaurant': Icons.restaurant,
+    'Fast food': Icons.fastfood,
+    'Boulangerie': Icons.bakery_dining,
+    'Café': Icons.coffee,
+    'Bar': Icons.local_bar,
+  },
+  'Commerce': {
+    'Marché': Icons.storefront,
+    'Supermarché': Icons.shopping_cart,
+    'Boutique': Icons.store,
+  },
+  'Finance': {
+    'Banque': Icons.account_balance,
+    'Mobile Money': Icons.phone_android,
+    'Bureau de change': Icons.currency_exchange,
+  },
+  'Loisirs': {
+    'Stade': Icons.stadium,
+    'Terrain de foot': Icons.sports_soccer,
+    'Cinéma': Icons.movie,
+    'Parc': Icons.park,
+  },
+  'Nature': {
+    'Forêt': Icons.forest,
+    'Rivière': Icons.water,
+    'Plage': Icons.beach_access,
+    'Plantation': Icons.nature,
+  },
+  'Hébergement': {
+  'Hôtel': Icons.hotel,
+  'Auberge': Icons.house,
+  'Résidence': Icons.apartment,
+  'Pension': Icons.bed,
+  'Motel': Icons.hotel,
+},
+'Énergie': {
+  'Station essence': Icons.local_gas_station,
+  'Station GPL': Icons.local_gas_station,
+  'Groupe électrogène': Icons.electrical_services,
+},
+};
   double? _direction = 0;
   double _vitesse = 0.0;
   double _precision = 0.0;
@@ -953,41 +1051,77 @@ Positioned(
     child: Row(children: [
       for (final type in ['Tous', 'Localités', 'Voirie', 'Lieux publics', 'Plus...'])
         GestureDetector(
-         onTap: () {
-  if (type == 'Plus...') {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        expand: false,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.all(16),
-          children: [
-            const Text('Toutes les catégories',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            for (final cat in _filtreIcones.keys.where((k) => k != 'Tous'))
-              ListTile(
-                leading: Icon(_filtreIcones[cat], color: const Color(0xFFFF6B00)),
-                title: Text(cat),
-                trailing: _filtreType == cat
-                  ? const Icon(Icons.check, color: Color(0xFFFF6B00))
-                  : null,
-                onTap: () {
-                  setState(() => _filtreType = cat);
-                  Navigator.pop(context);
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  } else {
-    setState(() => _filtreType = type);
-  }
-},
+          onTap: () {
+            if (type == 'Plus...') {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => DraggableScrollableSheet(
+                  initialChildSize: 0.7,
+                  expand: false,
+                  builder: (_, controller) => ListView(
+                    controller: controller,
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      const Text('Toutes les catégories',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 12),
+                      for (final cat in _filtreIcones.keys.where((k) => k != 'Tous')) ...[
+                        ListTile(
+                          leading: Icon(_filtreIcones[cat], color: const Color(0xFFFF6B00)),
+                          title: Text(cat, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          trailing: _filtreType == cat
+                            ? const Icon(Icons.check, color: Color(0xFFFF6B00))
+                            : null,
+                          onTap: () {
+                            setState(() => _filtreType = cat);
+                            Navigator.pop(context);
+                          },
+                        ),
+                        if (_filtreIconesSous.containsKey(cat))
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16, bottom: 8),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: (_filtreIconesSous[cat]!).entries.map((e) =>
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() => _filtreType = e.key);
+                                    Navigator.pop(context);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: _filtreType == e.key
+                                        ? const Color(0xFFFF6B00)
+                                        : Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                      Icon(e.value, size: 14,
+                                        color: _filtreType == e.key ? Colors.white : Colors.black87),
+                                      const SizedBox(width: 4),
+                                      Text(e.key,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: _filtreType == e.key ? Colors.white : Colors.black87,
+                                        )),
+                                    ]),
+                                  ),
+                                ),
+                              ).toList(),
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            } else {
+              setState(() => _filtreType = type);
+            }
+          },
           child: Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -998,12 +1132,18 @@ Positioned(
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
             ),
-            child: Text(type,
-              style: TextStyle(
-                color: _filtreType == type ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              )),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(_filtreIcones[type] ?? Icons.more_horiz,
+                size: 14,
+                color: _filtreType == type ? Colors.white : Colors.black87),
+              const SizedBox(width: 4),
+              Text(type,
+                style: TextStyle(
+                  color: _filtreType == type ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                )),
+            ]),
           ),
         ),
     ]),
