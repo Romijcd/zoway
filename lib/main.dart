@@ -431,6 +431,24 @@ class _CarteScreenState extends State<CarteScreen> {
   LatLng _maPosition = const LatLng(5.3569, -3.9464);
   bool _gpsCharge = false;
   String _filtreType = 'Tous';
+  final Map<String, IconData> _filtreIcones = {
+  'Tous': Icons.map,
+  'Localités': Icons.location_city,
+  'Voirie': Icons.add_road,
+  'Lieux publics': Icons.account_balance,
+  'Santé': Icons.local_hospital,
+  'Éducation': Icons.school,
+  'Religion': Icons.church,
+  'Transport': Icons.directions_bus,
+  'Restauration': Icons.restaurant,
+  'Hébergement': Icons.hotel,
+  'Commerce': Icons.store,
+  'Finance': Icons.account_balance_wallet,
+  'Énergie': Icons.local_gas_station,
+  'Loisirs': Icons.sports_soccer,
+  'Nature': Icons.park,
+  'Agriculture': Icons.grass,
+};
   double? _direction = 0;
   double _vitesse = 0.0;
   double _precision = 0.0;
@@ -935,7 +953,41 @@ Positioned(
     child: Row(children: [
       for (final type in ['Tous', 'Localités', 'Voirie', 'Lieux publics', 'Plus...'])
         GestureDetector(
-          onTap: () => setState(() => _filtreType = type),
+         onTap: () {
+  if (type == 'Plus...') {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        expand: false,
+        builder: (_, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text('Toutes les catégories',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            for (final cat in _filtreIcones.keys.where((k) => k != 'Tous'))
+              ListTile(
+                leading: Icon(_filtreIcones[cat], color: const Color(0xFFFF6B00)),
+                title: Text(cat),
+                trailing: _filtreType == cat
+                  ? const Icon(Icons.check, color: Color(0xFFFF6B00))
+                  : null,
+                onTap: () {
+                  setState(() => _filtreType = cat);
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  } else {
+    setState(() => _filtreType = type);
+  }
+},
           child: Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
