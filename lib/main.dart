@@ -431,6 +431,7 @@ class _CarteScreenState extends State<CarteScreen> {
   LatLng _maPosition = const LatLng(5.3569, -3.9464);
   bool _gpsCharge = false;
   String _filtreType = 'Tous';
+String? _filtreSousType;
   final Map<String, IconData> _filtreIcones = {
   'Tous': Icons.map,
   'Localités': Icons.location_city,
@@ -1046,7 +1047,10 @@ Positioned(
 ),
 Positioned(
   top: 100, left: 16, right: 16,
-  child: SingleChildScrollView(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SingleChildScrollView(
     scrollDirection: Axis.horizontal,
     child: Row(children: [
       for (final type in ['Tous', 'Localités', 'Voirie', 'Lieux publics', 'Plus...'])
@@ -1087,9 +1091,12 @@ Positioned(
                               children: (_filtreIconesSous[cat]!).entries.map((e) =>
                                 GestureDetector(
                                   onTap: () {
-                                    setState(() => _filtreType = e.key);
-                                    Navigator.pop(context);
-                                  },
+  setState(() {
+    _filtreType = cat;
+    _filtreSousType = null;
+  });
+  Navigator.pop(context);
+},
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                     decoration: BoxDecoration(
@@ -1119,7 +1126,10 @@ Positioned(
                 ),
               );
             } else {
-              setState(() => _filtreType = type);
+              setState(() {
+  _filtreType = type;
+  _filtreSousType = null;
+});
             }
           },
           child: Container(
@@ -1147,6 +1157,62 @@ Positioned(
           ),
         ),
     ]),
+  ),
+  if (_filtreType != 'Tous' && _filtreIconesSous.containsKey(_filtreType)) ...[
+    const SizedBox(height: 8),
+    SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
+        GestureDetector(
+          onTap: () => setState(() => _filtreSousType = null),
+          child: Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: _filtreSousType == null
+                ? const Color(0xFFFF6B00)
+                : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
+            ),
+            child: Text('Tous',
+              style: TextStyle(
+                fontSize: 11,
+                color: _filtreSousType == null ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w600,
+              )),
+          ),
+        ),
+        for (final entry in _filtreIconesSous[_filtreType]!.entries)
+          GestureDetector(
+            onTap: () => setState(() => _filtreSousType = entry.key),
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: _filtreSousType == entry.key
+                  ? const Color(0xFFFF6B00)
+                  : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(entry.value, size: 12,
+                  color: _filtreSousType == entry.key ? Colors.white : Colors.black87),
+                const SizedBox(width: 4),
+                Text(entry.key,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _filtreSousType == entry.key ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                  )),
+              ]),
+            ),
+          ),
+      ]),
+    ),
+  ],
+],
   ),
 ),
 Positioned(
