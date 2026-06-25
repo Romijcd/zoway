@@ -933,7 +933,7 @@ Positioned(
   child: SingleChildScrollView(
     scrollDirection: Axis.horizontal,
     child: Row(children: [
-      for (final type in ['Tous', 'Carrefour', 'Rue', 'Quartier', 'Monument', 'Commerce'])
+      for (final type in ['Tous', 'Localités', 'Voirie', 'Lieux publics', 'Plus...'])
         GestureDetector(
           onTap: () => setState(() => _filtreType = type),
           child: Container(
@@ -1287,11 +1287,150 @@ class _NommerSheet extends StatefulWidget {
  class _NommerSheetState extends State<_NommerSheet> {
   final _nomController = TextEditingController();
   final _descController = TextEditingController();
-  String _type = 'Carrefour';
-  String _lang = 'Français';
+  String _categorie = 'Localités';
+  String? _sousCategorie;
+final Map<String, IconData> _iconesS = {
+  // Localités
+  'Quartier': Icons.holiday_village,
+  'Sous-quartier': Icons.location_on,
+  'Village': Icons.cottage,
+  'Cité': Icons.apartment,
+  'Résidence': Icons.house,
+  'Campement': Icons.cabin,
+  'Hameau': Icons.location_on,
+  // Voirie
+  'Rue': Icons.turn_right,
+  'Avenue': Icons.add_road,
+  'Boulevard': Icons.add_road,
+  'Carrefour': Icons.swap_calls,
+  'Rond-point': Icons.roundabout_right,
+  'Impasse': Icons.block,
+  'Pont': Icons.directions,
+  'Passage': Icons.transfer_within_a_station,
+  // Lieux publics
+  'Mairie': Icons.account_balance,
+  'Préfecture': Icons.account_balance,
+  'Sous-préfecture': Icons.account_balance,
+  'Commissariat': Icons.local_police,
+  'Gendarmerie': Icons.local_police,
+  'Tribunal': Icons.gavel,
+  // Santé
+  'Hôpital': Icons.local_hospital,
+  'Clinique': Icons.medical_services,
+  'Centre de santé': Icons.health_and_safety,
+  'Pharmacie': Icons.medication,
+  'Cabinet médical': Icons.medical_services,
+  'Maternité': Icons.child_care,
+  // Éducation
+  'École primaire': Icons.school,
+  'Collège': Icons.school,
+  'Lycée': Icons.school,
+  'Université': Icons.account_balance,
+  'Centre de formation': Icons.cast_for_education,
+  'Bibliothèque': Icons.menu_book,
+  // Religion
+  'Église': Icons.church,
+  'Mosquée': Icons.mosque,
+  'Temple': Icons.temple_buddhist,
+  'Cathédrale': Icons.church,
+  'Paroisse': Icons.church,
+  // Transport
+  'Gare routière': Icons.directions_bus,
+  'Arrêt bus': Icons.bus_alert,
+  'Gare ferroviaire': Icons.train,
+  'Port': Icons.directions_boat,
+  'Aéroport': Icons.flight,
+  'Station taxi': Icons.local_taxi,
+  'Parking': Icons.local_parking,
+  // Restauration
+  'Maquis': Icons.local_bar,
+  'Restaurant': Icons.restaurant,
+  'Fast food': Icons.fastfood,
+  'Boulangerie': Icons.bakery_dining,
+  'Café': Icons.coffee,
+  'Bar': Icons.local_bar,
+  'Kiosque': Icons.store,
+  // Hébergement
+  'Hôtel': Icons.hotel,
+  'Auberge': Icons.house,
+  'Résidence': Icons.apartment,
+  'Pension': Icons.bed,
+  'Motel': Icons.hotel,
+  // Commerce
+  'Marché': Icons.storefront,
+  'Supermarché': Icons.shopping_cart,
+  'Boutique': Icons.store,
+  'Quincaillerie': Icons.hardware,
+  'Librairie': Icons.menu_book,
+  // Finance
+  'Banque': Icons.account_balance,
+  'Microfinance': Icons.savings,
+  'Mobile Money': Icons.phone_android,
+  'Bureau de change': Icons.currency_exchange,
+  'Assurance': Icons.security,
+  // Énergie
+  'Station essence': Icons.local_gas_station,
+  'Station GPL': Icons.local_gas_station,
+  'Groupe électrogène': Icons.electrical_services,
+  // Loisirs
+  'Stade': Icons.stadium,
+  'Terrain de foot': Icons.sports_soccer,
+  'Salle de sport': Icons.fitness_center,
+  'Cinéma': Icons.movie,
+  'Discothèque': Icons.nightlife,
+  'Parc': Icons.park,
+  // Nature
+  'Forêt': Icons.forest,
+  'Rivière': Icons.water,
+  'Lac': Icons.water,
+  'Colline': Icons.terrain,
+  'Plage': Icons.beach_access,
+  'Champ': Icons.grass,
+  'Plantation': Icons.nature,
+  // Agriculture
+  'Coopérative': Icons.group,
+  'Moulin': Icons.wind_power,
+  'Silo': Icons.warehouse,
+  'Ferme': Icons.agriculture,
+};
+final Map<String, IconData> _icones = {
+  'Localités': Icons.location_city,
+  'Voirie': Icons.add_road,
+  'Lieux publics': Icons.account_balance,
+  'Santé': Icons.local_hospital,
+  'Éducation': Icons.school,
+  'Religion': Icons.church,
+  'Transport': Icons.directions_bus,
+  'Restauration': Icons.restaurant,
+  'Hébergement': Icons.hotel,
+  'Commerce': Icons.store,
+  'Finance': Icons.account_balance_wallet,
+  'Énergie': Icons.local_gas_station,
+  'Loisirs': Icons.sports_soccer,
+  'Nature': Icons.park,
+  'Agriculture': Icons.grass,
+};
+  final Map<String, List<String>> _categories = {
+    'Localités': ['Quartier', 'Sous-quartier', 'Village', 'Cité', 'Résidence', 'Campement', 'Hameau'],
+    'Voirie': ['Rue', 'Avenue', 'Boulevard', 'Carrefour', 'Rond-point', 'Impasse', 'Pont', 'Passage'],
+    'Lieux publics': ['Mairie', 'Préfecture', 'Sous-préfecture', 'Commissariat', 'Gendarmerie', 'Tribunal'],
+    'Santé': ['Hôpital', 'Clinique', 'Centre de santé', 'Pharmacie', 'Cabinet médical', 'Maternité'],
+    'Éducation': ['École primaire', 'Collège', 'Lycée', 'Université', 'Centre de formation', 'Bibliothèque'],
+    'Religion': ['Église', 'Mosquée', 'Temple', 'Cathédrale', 'Paroisse'],
+    'Transport': ['Gare routière', 'Arrêt bus', 'Gare ferroviaire', 'Port', 'Aéroport', 'Station taxi', 'Parking'],
+    'Restauration': ['Maquis', 'Restaurant', 'Fast food', 'Boulangerie', 'Café', 'Bar', 'Kiosque'],
+    'Hébergement': ['Hôtel', 'Auberge', 'Résidence', 'Pension', 'Motel'],
+    'Commerce': ['Marché', 'Supermarché', 'Boutique', 'Quincaillerie', 'Librairie'],
+    'Finance': ['Banque', 'Microfinance', 'Mobile Money', 'Bureau de change', 'Assurance'],
+    'Énergie': ['Station essence', 'Station GPL', 'Groupe électrogène'],
+    'Loisirs': ['Stade', 'Terrain de foot', 'Salle de sport', 'Cinéma', 'Discothèque', 'Parc'],
+    'Nature': ['Forêt', 'Rivière', 'Lac', 'Colline', 'Plage', 'Champ', 'Plantation'],
+    'Agriculture': ['Coopérative', 'Moulin', 'Silo', 'Ferme'],
+  };
 
   @override
   Widget build(BuildContext context) {
+    final sousCats = _categories[_categorie] ?? [];
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: 20, right: 20, top: 20,
@@ -1333,6 +1472,64 @@ class _NommerSheet extends StatefulWidget {
             textCapitalization: TextCapitalization.sentences,
           ),
           const SizedBox(height: 12),
+          const Text('CATÉGORIE',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+              color: Colors.grey, letterSpacing: 0.5)),
+          const SizedBox(height: 6),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _categories.keys.map((cat) {
+                final active = _categorie == cat;
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    _categorie = cat;
+                    _sousCategorie = null;
+                  }),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: active ? const Color(0xFFFF6B00) : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+  Icon(_icones[cat] ?? Icons.place,
+    size: 14,
+    color: active ? Colors.white : Colors.black87),
+  const SizedBox(width: 4),
+  Text(cat,
+    style: TextStyle(
+      color: active ? Colors.white : Colors.black87,
+      fontWeight: FontWeight.w600,
+      fontSize: 12,
+    )),
+]),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('SOUS-CATÉGORIE',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+              color: Colors.grey, letterSpacing: 0.5)),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            value: _sousCategorie,
+            hint: const Text('Choisir une sous-catégorie'),
+            decoration: InputDecoration(
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            items: sousCats.map((s) =>
+              DropdownMenuItem(value: s, child: Row(children: [
+                Icon(_iconesS[s] ?? Icons.place, size: 16, color: const Color(0xFFFF6B00)),
+                const SizedBox(width: 8),
+                Text(s),
+              ]))).toList(),
+            onChanged: (v) => setState(() => _sousCategorie = v),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: _descController,
             decoration: const InputDecoration(
@@ -1341,41 +1538,6 @@ class _NommerSheet extends StatefulWidget {
               border: OutlineInputBorder(),
             ),
             maxLines: 2,
-          ),
-          const SizedBox(height: 12),
-          const Text('TYPE DE LIEU',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-              color: Colors.grey, letterSpacing: 0.5)),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<String>(
-            value: _type,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            items: ['Carrefour', 'Rue', 'Quartier', 'Monument', 'Commerce']
-                .map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-            onChanged: (v) => setState(() => _type = v!),
-          ),
-          const SizedBox(height: 12),
-          const Text('LANGUE',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-              color: Colors.grey, letterSpacing: 0.5)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: ['Français', 'Dioula', 'Baoulé', 'Autre'].map((l) {
-              final active = _lang == l;
-              return ChoiceChip(
-                label: Text(l),
-                selected: active,
-                selectedColor: const Color(0xFFE8F7F2),
-                labelStyle: TextStyle(
-                  color: active ? const Color(0xFF0F8A5F) : Colors.grey,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                ),
-                onSelected: (_) => setState(() => _lang = l),
-              );
-            }).toList(),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1389,7 +1551,8 @@ class _NommerSheet extends StatefulWidget {
               onPressed: () {
                 final nom = _nomController.text.trim();
                 if (nom.isEmpty) return;
-                widget.onSubmit(nom, _type, _descController.text.trim());
+                final type = _sousCategorie ?? _categorie;
+                widget.onSubmit(nom, type, _descController.text.trim());
                 Navigator.pop(context);
               },
               child: const Text('Soumettre ce nom',
@@ -1397,7 +1560,7 @@ class _NommerSheet extends StatefulWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Center(
+          const Center(
             child: Text('Tu gagneras +5 pts à la soumission',
               style: TextStyle(fontSize: 12, color: Colors.grey)),
           ),
