@@ -1,10 +1,15 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -434,126 +439,18 @@ class _CarteScreenState extends State<CarteScreen> {
   bool _gpsCharge = false;
   String _filtreType = 'Tous';
 String? _filtreSousType;
-  final Map<String, IconData> _filtreIcones = {
-  'Tous': Icons.map,
-  'Localités': Icons.location_city,
-  'Voirie': Icons.add_road,
-  'Lieux publics': Icons.account_balance,
-  'Santé': Icons.local_hospital,
-  'Éducation': Icons.school,
-  'Religion': Icons.church,
-  'Transport': Icons.directions_bus,
-  'Restauration': Icons.restaurant,
-  'Hébergement': Icons.hotel,
-  'Commerce': Icons.store,
-  'Finance': Icons.account_balance_wallet,
-  'Énergie': Icons.local_gas_station,
-  'Loisirs': Icons.sports_soccer,
-  'Nature': Icons.park,
-  'Agriculture': Icons.grass,
-};
-final Map<String, Map<String, IconData>> _filtreIconesSous = {
-  'Localités': {
-    'Quartier': Icons.holiday_village,
-    'Sous-quartier': Icons.location_on,
-    'Village': Icons.cottage,
-    'Cité': Icons.apartment,
-    'Résidence': Icons.house,
-    'Campement': Icons.cabin,
-    'Hameau': Icons.location_on,
-  },
-  'Voirie': {
-    'Rue': Icons.turn_right,
-    'Avenue': Icons.add_road,
-    'Boulevard': Icons.add_road,
-    'Carrefour': Icons.swap_calls,
-    'Rond-point': Icons.roundabout_right,
-    'Impasse': Icons.block,
-    'Pont': Icons.directions,
-    'Passage': Icons.transfer_within_a_station,
-  },
-  'Lieux publics': {
-    'Mairie': Icons.account_balance,
-    'Préfecture': Icons.account_balance,
-    'Commissariat': Icons.local_police,
-    'Gendarmerie': Icons.local_police,
-    'Tribunal': Icons.gavel,
-  },
-  'Santé': {
-    'Hôpital': Icons.local_hospital,
-    'Clinique': Icons.medical_services,
-    'Pharmacie': Icons.medication,
-    'Maternité': Icons.child_care,
-  },
-  'Éducation': {
-    'École primaire': Icons.school,
-    'Collège': Icons.school,
-    'Lycée': Icons.school,
-    'Université': Icons.account_balance,
-    'Bibliothèque': Icons.menu_book,
-  },
-  'Religion': {
-    'Église': Icons.church,
-    'Mosquée': Icons.mosque,
-    'Temple': Icons.temple_buddhist,
-    'Cathédrale': Icons.church,
-  },
-  'Transport': {
-    'Gare routière': Icons.directions_bus,
-    'Arrêt bus': Icons.bus_alert,
-    'Gare ferroviaire': Icons.train,
-    'Port': Icons.directions_boat,
-    'Aéroport': Icons.flight,
-    'Station taxi': Icons.local_taxi,
-    'Parking': Icons.local_parking,
-  },
-  'Restauration': {
-    'Maquis': Icons.local_bar,
-    'Restaurant': Icons.restaurant,
-    'Fast food': Icons.fastfood,
-    'Boulangerie': Icons.bakery_dining,
-    'Café': Icons.coffee,
-    'Bar': Icons.local_bar,
-  },
-  'Commerce': {
-    'Marché': Icons.storefront,
-    'Supermarché': Icons.shopping_cart,
-    'Boutique': Icons.store,
-  },
-  'Finance': {
-    'Banque': Icons.account_balance,
-    'Mobile Money': Icons.phone_android,
-    'Bureau de change': Icons.currency_exchange,
-  },
-  'Loisirs': {
-    'Stade': Icons.stadium,
-    'Terrain de foot': Icons.sports_soccer,
-    'Cinéma': Icons.movie,
-    'Parc': Icons.park,
-  },
-  'Nature': {
-    'Forêt': Icons.forest,
-    'Rivière': Icons.water,
-    'Plage': Icons.beach_access,
-    'Plantation': Icons.nature,
-  },
-  'Hébergement': {
-  'Hôtel': Icons.hotel,
-  'Auberge': Icons.house,
-  'Résidence': Icons.apartment,
-  'Pension': Icons.bed,
-  'Motel': Icons.hotel,
-},
-'Énergie': {
-  'Station essence': Icons.local_gas_station,
-  'Station GPL': Icons.local_gas_station,
-  'Groupe électrogène': Icons.electrical_services,
-},
-};
+  // Catégories du filtre = source unique + 'Tous' en tête
+  final Map<String, IconData> _filtreIcones = {'Tous': Icons.map, ...kCategorieIcones};
+  // Sous-catégories du filtre/marqueurs = source unique
+  final Map<String, Map<String, IconData>> _filtreIconesSous = kSousCategories;
   double? _direction = 0;
   double _vitesse = 0.0;
   double _precision = 0.0;
   StreamSubscription<Position>? _positionStream;
+  // ── Enregistrement de voies (façon « paving » Waze, 100 % local) ──
+  bool _enregistreTrajet = false;
+  List<LatLng> _traceEnCours = [];
+  List<List<LatLng>> _voiesEnregistrees = [];
   final FlutterTts _tts = FlutterTts();
   String _langueNavigation = 'Français';
 
@@ -572,6 +469,8 @@ List<Map<String, dynamic>> _alertesData = [];
 List<LatLng> _itineraire = [];
 LatLng? _destination;
 String _distanceInfo = '';
+String _distanceTexte = ''; // ex: « 3.2 km »
+String _dureeTexte = '';    // ex: « 8 min »
 bool _navigationActive = false;
 
 final List<Map<String, dynamic>> _typesAlertes = [
@@ -586,12 +485,46 @@ final List<Map<String, dynamic>> _typesAlertes = [
   {'type': 'Contrôle radar', 'emoji': '📡', 'couleur': Colors.indigo},
   {'type': 'Coupeur de route', 'emoji': '🔪', 'couleur': Colors.red},
 ];
-  @override
+// Style vectoriel MapTiler chargé au démarrage, et son thème SANS libellés
+// (toutes les couches de type « symbol » sont retirées -> aucun nom/POI du
+// fournisseur, mais tout le détail des voies entre les lots).
+Style? _vectorStyle;
+vtr.Theme? _mapTheme;
+
+Future<void> _loadMapStyle() async {
+  try {
+    final style = await StyleReader(
+      uri: 'https://api.maptiler.com/maps/streets-v2/style.json?key={key}',
+      apiKey: kMapTilerKey,
+    ).read();
+    // On ne garde que les couches non-textuelles (fond, surfaces, lignes…).
+    final theme = style.theme.copyWith(types: const {
+      vtr.ThemeLayerType.background,
+      vtr.ThemeLayerType.fill,
+      vtr.ThemeLayerType.fillExtrusion,
+      vtr.ThemeLayerType.line,
+      vtr.ThemeLayerType.raster,
+      vtr.ThemeLayerType.unsupported,
+    });
+    if (mounted) {
+      setState(() {
+        _vectorStyle = style;
+        _mapTheme = theme;
+      });
+    }
+  } catch (e) {
+    debugPrint('Erreur chargement style vectoriel: $e');
+  }
+}
+
+@override
 void initState() {
   super.initState();
 _initLocation();
 _chargerLieux();
 _chargerAlertes();
+_loadMapStyle();
+_chargerVoies();
 FlutterCompass.events!.listen((event) {
   if (mounted) {
     setState(() => _direction = event.heading);
@@ -616,11 +549,18 @@ Future<void> _calculerItineraire(LatLng destination) async {
       final points = decodePolyline(geometry)
         .map((p) => LatLng(p[0].toDouble(), p[1].toDouble()))
         .toList();
-      
+      // OSRM "snappe" le départ et l'arrivée sur la route la plus proche :
+      // on raccorde le tracé à la vraie position et au lieu exact, pour que
+      // la flèche de départ et l'épingle d'arrivée tombent au bon endroit.
+      points.insert(0, _maPosition);
+      points.add(destination);
+
       setState(() {
         _itineraire = points;
         _destination = destination;
         _distanceInfo = '$distance km · $duration min';
+        _distanceTexte = '$distance km';
+        _dureeTexte = '$duration min';
         _navigationActive = true;
       });
 
@@ -697,6 +637,8 @@ Future<void> _chargerAlertes() async {
             _maPosition = LatLng(pos.latitude, pos.longitude);
             _vitesse = pos.speed;
             _precision = pos.accuracy;
+            // Enregistrement : on ajoute le point à la voie en cours.
+            if (_enregistreTrajet) _traceEnCours.add(_maPosition);
           });
           if (_navigationActive) {
             _mapController.move(_maPosition, 17);
@@ -711,6 +653,112 @@ Future<void> _chargerAlertes() async {
     debugPrint('Erreur GPS: $e');
   }
 }
+
+  // ── Enregistrement de voies (100 % local, manuel) ──
+  void _demarrerEnregistrement() {
+    setState(() {
+      _enregistreTrajet = true;
+      _traceEnCours = [_maPosition];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('🔴 Enregistrement du trajet démarré'),
+      backgroundColor: Color(0xFFFF6B00)));
+  }
+
+  Future<void> _arreterEnregistrement() async {
+    final trace = List<LatLng>.from(_traceEnCours);
+    setState(() {
+      _enregistreTrajet = false;
+      _traceEnCours = [];
+    });
+    if (trace.length < 2) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Trajet trop court, rien enregistré')));
+      }
+      return;
+    }
+    setState(() => _voiesEnregistrees.add(trace));
+    await _sauverVoies();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('✅ Voie enregistrée sur ta carte'),
+        backgroundColor: Color(0xFF0F8A5F)));
+    }
+  }
+
+  Future<void> _chargerVoies() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final brut = prefs.getString('voies_enregistrees');
+      if (brut == null) return;
+      final List<dynamic> data = jsonDecode(brut);
+      final voies = data.map<List<LatLng>>((v) => (v as List)
+        .map<LatLng>((p) => LatLng((p[0] as num).toDouble(),
+          (p[1] as num).toDouble())).toList()).toList();
+      if (mounted) setState(() => _voiesEnregistrees = voies);
+    } catch (e) {
+      debugPrint('Erreur chargement voies: $e');
+    }
+  }
+
+  Future<void> _sauverVoies() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = _voiesEnregistrees
+        .map((v) => v.map((p) => [p.latitude, p.longitude]).toList())
+        .toList();
+      await prefs.setString('voies_enregistrees', jsonEncode(data));
+    } catch (e) {
+      debugPrint('Erreur sauvegarde voies: $e');
+    }
+  }
+
+  // Liste des voies enregistrées avec suppression (contrôle utilisateur).
+  void _gererVoies() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('🛣️ Mes voies enregistrées',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              ),
+              if (_voiesEnregistrees.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text("Aucune voie enregistrée pour l'instant.",
+                    style: TextStyle(color: Colors.grey)),
+                ),
+              ..._voiesEnregistrees.asMap().entries.map((e) {
+                final i = e.key;
+                return ListTile(
+                  leading: const Icon(Icons.route, color: Color(0xFFFF6B00)),
+                  title: Text('Voie ${i + 1} · ${e.value.length} points'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () async {
+                      setState(() => _voiesEnregistrees.removeAt(i));
+                      await _sauverVoies();
+                      setSheetState(() {});
+                    },
+                  ),
+                );
+              }),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Color _statusColor(String status) {
     switch (status) {
@@ -810,70 +858,202 @@ Future<void> _chargerAlertes() async {
               style: const TextStyle(color: Colors.grey, fontSize: 13)),
           ]),
           const SizedBox(height: 16),
-          // Bouton naviguer
-          SizedBox(
-            width: double.infinity, height: 48,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A237E),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                _calculerItineraire(LatLng(lieu['lat'], lieu['lng']));
-              },
-              icon: const Icon(Icons.navigation),
-              label: const Text('Y aller',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF0F8A5F),
-                  side: const BorderSide(color: Color(0xFF0F8A5F)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () {
+          // Barre d'actions façon Google Maps (scrollable horizontalement).
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              _actionFiche(
+                icon: Icons.directions,
+                label: 'Itinéraire',
+                color: const Color(0xFF1A237E),
+                onTap: () {
                   Navigator.pop(context);
-                  setState(() => pointsTotal += 2);
+                  _calculerItineraire(LatLng(lieu['lat'], lieu['lng']));
+                },
+              ),
+              _actionFiche(
+                icon: Icons.navigation,
+                label: 'Démarrer',
+                color: const Color(0xFF0F8A5F),
+                onTap: () {
+                  Navigator.pop(context);
+                  _calculerItineraire(LatLng(lieu['lat'], lieu['lng']));
+                  _mapController.move(
+                    LatLng(lieu['lat'], lieu['lng']), 16);
+                },
+              ),
+              _actionFiche(
+                icon: Icons.call,
+                label: 'Appeler',
+                color: const Color(0xFF1565C0),
+                onTap: () {
+                  Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('👍 Vote enregistré · +2 pts'),
-                      backgroundColor: Color(0xFF0F8A5F)));
+                      content: Text('📞 Appeler — bientôt disponible')));
                 },
-                icon: const Icon(Icons.thumb_up_outlined, size: 16),
-                label: const Text('Confirmer'),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFD85A30),
-                  side: const BorderSide(color: Color(0xFFD85A30)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () {
+              _actionFiche(
+                icon: _favoris.contains(lieu['nom'])
+                  ? Icons.bookmark : Icons.bookmark_border,
+                label: 'Enregistrer',
+                color: const Color(0xFFD08700),
+                onTap: () => _enregistrerLieu(lieu),
+              ),
+              _actionFiche(
+                icon: Icons.share,
+                label: 'Partager',
+                color: const Color(0xFF6A1B9A),
+                onTap: () => _partagerLieu(lieu),
+              ),
+              _actionFiche(
+                icon: Icons.edit,
+                label: 'Modifier',
+                color: const Color(0xFF455A64),
+                onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('🚩 Signalement envoyé · +8 pts')));
+                    const SnackBar(
+                      content: Text('✏️ Modifier — bientôt disponible')));
                 },
-                icon: const Icon(Icons.flag_outlined, size: 16),
-                label: const Text('Signaler'),
               ),
-            ),
-          ]),
+              _actionFiche(
+                icon: Icons.more_horiz,
+                label: 'Plus',
+                color: Colors.grey,
+                onTap: () {
+                  Navigator.pop(context);
+                  _plusActions(lieu);
+                },
+              ),
+            ]),
+          ),
         ],
       ),
     ),
   );
+}
+
+// ── Fiche de lieu : actions façon Google Maps ──
+final Set<String> _favoris = {};
+
+// Bouton d'action circulaire (icône + libellé) de la fiche de lieu.
+Widget _actionFiche({
+  required IconData icon,
+  required String label,
+  required Color color,
+  required VoidCallback onTap,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 72,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 46, height: 46,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 6),
+          Text(label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, color: Colors.grey[800],
+              fontWeight: FontWeight.w600)),
+        ],
+      ),
+    ),
+  );
+}
+
+void _enregistrerLieu(Map<String, dynamic> lieu) {
+  final nom = lieu['nom']?.toString() ?? '';
+  setState(() {
+    _favoris.contains(nom) ? _favoris.remove(nom) : _favoris.add(nom);
+  });
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(_favoris.contains(nom)
+      ? '🔖 « $nom » enregistré'
+      : '« $nom » retiré des enregistrés'),
+  ));
+}
+
+Future<void> _partagerLieu(Map<String, dynamic> lieu) async {
+  final nom = lieu['nom']?.toString() ?? 'Lieu';
+  final lien = 'https://maps.google.com/?q=${lieu['lat']},${lieu['lng']}';
+  final RenderBox? box = context.findRenderObject() as RenderBox?;
+  await Share.share(
+    '$nom — sur ZoWay\n$lien',
+    subject: nom,
+    sharePositionOrigin: box != null
+      ? box.localToGlobal(Offset.zero) & box.size
+      : null,
+  );
+}
+
+// Menu « Plus » : actions secondaires (confirmer, signaler, centrer).
+void _plusActions(Map<String, dynamic> lieu) {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.thumb_up_outlined,
+              color: Color(0xFF0F8A5F)),
+            title: const Text('Confirmer ce lieu'),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => pointsTotal += 2);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('👍 Vote enregistré · +2 pts'),
+                  backgroundColor: Color(0xFF0F8A5F)));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined, color: Color(0xFFD85A30)),
+            title: const Text('Signaler un problème'),
+            onTap: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🚩 Signalement envoyé · +8 pts')));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.my_location, color: Color(0xFF1A237E)),
+            title: const Text('Centrer sur ce lieu'),
+            onTap: () {
+              Navigator.pop(context);
+              _mapController.move(LatLng(lieu['lat'], lieu['lng']), 16);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// Cap (en radians, 0 = nord, sens horaire) du point a vers le point b.
+double _bearing(LatLng a, LatLng b) {
+  final dLon = (b.longitude - a.longitude) * math.pi / 180;
+  final lat1 = a.latitude * math.pi / 180;
+  final lat2 = b.latitude * math.pi / 180;
+  final y = math.sin(dLon) * math.cos(lat2);
+  final x = math.cos(lat1) * math.sin(lat2) -
+      math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+  return math.atan2(y, x);
 }
 
 String _typeEmoji(String type) {
@@ -943,10 +1123,26 @@ setState(() {
             onTap: null,
           ),
           children: [
-            TileLayer(
-  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  userAgentPackageName: 'ci.ZoWay.app',
-),
+            // Fond MapTiler VECTORIEL (style perso « sans libellés ») :
+            // l'app dessine la carte à partir du style.json -> aucun nom du
+            // fournisseur, seules les données ZoWay nommées apparaissent.
+            if (_vectorStyle != null && _mapTheme != null)
+              VectorTileLayer(
+                tileProviders: _vectorStyle!.providers,
+                theme: _mapTheme!,
+                maximumZoom: 18,
+              ),
+            // Voies enregistrées (local) + trace en cours d'enregistrement.
+            PolylineLayer(
+              polylines: [
+                for (final voie in _voiesEnregistrees)
+                  Polyline(points: voie, strokeWidth: 4,
+                    color: const Color(0xFFFF6B00).withOpacity(0.7)),
+                if (_enregistreTrajet && _traceEnCours.length > 1)
+                  Polyline(points: _traceEnCours, strokeWidth: 5,
+                    color: const Color(0xFFFF6B00)),
+              ],
+            ),
             if (_itineraire.isNotEmpty)
              PolylineLayer(
               polylines: [
@@ -957,6 +1153,74 @@ setState(() {
               ),
             ],
           ),
+            // Flèche au départ (orientée vers le trajet) + épingle à l'arrivée.
+            if (_itineraire.isNotEmpty)
+              MarkerLayer(markers: [
+                Marker(
+                  point: _itineraire.first,
+                  width: 40, height: 40,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0F8A5F),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(blurRadius: 4, color: Colors.black38)],
+                    ),
+                    child: Transform.rotate(
+                      angle: _itineraire.length > 1
+                        ? _bearing(_itineraire.first, _itineraire[1])
+                        : 0,
+                      child: const Icon(Icons.navigation,
+                        color: Colors.white, size: 22),
+                    ),
+                  ),
+                ),
+              ]),
+            // Bulle (distance · temps) À CÔTÉ du tracé : la pointe (à gauche
+            // de la bulle) se pose sur un point du tracé. alignment centerRight
+            // -> le point est au bord gauche, la bulle s'étend vers la droite.
+            if (_itineraire.isNotEmpty && _distanceInfo.isNotEmpty)
+              MarkerLayer(markers: [
+                Marker(
+                  point: _itineraire[_itineraire.length ~/ 2],
+                  width: 120, height: 52,
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Pointe dirigée vers la gauche, posée sur le tracé.
+                      SizedBox(
+                        width: 8, height: 16,
+                        child: CustomPaint(
+                          painter: _LeftTailPainter(const Color(0xFF1A237E)),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A237E),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: const [
+                            BoxShadow(blurRadius: 4, color: Colors.black38)],
+                        ),
+                        // Distance en haut, temps en dessous (plus compact).
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_distanceTexte,
+                              style: const TextStyle(color: Colors.white,
+                                fontWeight: FontWeight.w800, fontSize: 13)),
+                            Text(_dureeTexte,
+                              style: const TextStyle(color: Colors.white70,
+                                fontWeight: FontWeight.w600, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ]),
             MarkerLayer(markers: [
               Marker(
                 point: _maPosition,
@@ -1086,7 +1350,9 @@ setState(() {
         ),
 
 Positioned(
-  bottom: 160, right: 16,
+  // right: 14 (et non 16) car la boîte du bouton fait 48px : ça le centre
+  // sur la même verticale que la boussole/langue (cercles 44px à right: 16).
+  bottom: 145, right: 14,
   child: _BoutonAlertePulsant(
     onTap: () => _ouvrirFormulaireAlerte(),
   ),
@@ -1286,10 +1552,8 @@ Positioned(
               .contains(valeur.toLowerCase())).toList();
           if (lieuZoWay.isNotEmpty) {
             final lieu = lieuZoWay.first;
-            final dest = LatLng(lieu['lat'], lieu['lng']);
-            await _calculerItineraire(dest);
-            _mapController.move(dest, 15);
-            if (mounted) setState(() {});
+            _mapController.move(LatLng(lieu['lat'], lieu['lng']), 16);
+            if (mounted) _ouvrirDetail(lieu);
             return;
           }
           // Sinon chercher sur Nominatim
@@ -1326,38 +1590,50 @@ Positioned(
       color: const Color(0xFFFF6B00).withOpacity(0.9),
     )),
 ),
-if (_navigationActive && _distanceInfo.isNotEmpty)
-  Positioned(
-    bottom: 180, left: 16, right: 16,
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A237E),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
-      ),
-      child: Row(children: [
-        const Icon(Icons.navigation, color: Colors.white),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(_distanceInfo,
-            style: const TextStyle(color: Colors.white,
-              fontWeight: FontWeight.w700, fontSize: 15)),
-        ),
-        GestureDetector(
-          onTap: () => setState(() {
-            _itineraire = [];
-            _destination = null;
-            _distanceInfo = '';
-            _navigationActive = false;
-          }),
-          child: const Icon(Icons.close, color: Colors.white),
-        ),
-      ]),
-    ),
-  ),
+// ── Enregistrement de voies : gérer (haut) + start/stop (bas) ──
 Positioned(
-  bottom: 280, right: 16,
+  left: 16, bottom: 44,
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      GestureDetector(
+        onTap: _gererVoies,
+        child: Container(
+          width: 40, height: 40,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(blurRadius: 4, color: Colors.black26)],
+          ),
+          child: const Icon(Icons.route, color: Color(0xFFFF6B00), size: 22),
+        ),
+      ),
+      const SizedBox(height: 10),
+      GestureDetector(
+        onTap: _enregistreTrajet
+          ? _arreterEnregistrement
+          : _demarrerEnregistrement,
+        child: Container(
+          width: 52, height: 52,
+          decoration: BoxDecoration(
+            color: _enregistreTrajet
+              ? const Color(0xFFD81B30) : Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: const [BoxShadow(blurRadius: 5, color: Colors.black38)],
+          ),
+          child: Icon(
+            _enregistreTrajet ? Icons.stop : Icons.fiber_manual_record,
+            color: _enregistreTrajet
+              ? Colors.white : const Color(0xFFD81B30),
+            size: 28,
+          ),
+        ),
+      ),
+    ],
+  ),
+),
+Positioned(
+  top: 180, right: 16,
   child: GestureDetector(
     onTap: () {
       if (_direction != null) {
@@ -1379,11 +1655,9 @@ Positioned(
   ),
 ), 
 Positioned(
-  bottom: 220, right: 16,
-  child: FloatingActionButton.small(
-    heroTag: 'voix',
-    backgroundColor: Colors.white,
-    onPressed: () {
+  top: 236, right: 16,
+  child: GestureDetector(
+    onTap: () {
       showModalBottomSheet(
         context: context,
         shape: const RoundedRectangleBorder(
@@ -1426,16 +1700,30 @@ Positioned(
         ),
       );
     },
-    child: const Icon(Icons.record_voice_over, color: Color(0xFFFF6B00)),
+    child: Container(
+      width: 44, height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+      ),
+      child: const Icon(Icons.record_voice_over, color: Color(0xFFFF6B00), size: 24),
+    ),
   ),
 ),
         Positioned(
-          bottom: 100, right: 16,
-          child: FloatingActionButton.small(
-            heroTag: 'center',
-            backgroundColor: Colors.white,
-            onPressed: () => _mapController.move(_maPosition, 15),
-            child: const Icon(Icons.my_location, color: Color(0xFF0F8A5F)),
+          bottom: 85, right: 16,
+          child: GestureDetector(
+            onTap: () => _mapController.move(_maPosition, 15),
+            child: Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+              ),
+              child: const Icon(Icons.my_location, color: Color(0xFF0F8A5F), size: 24),
+            ),
           ),
         ),
       ]),
@@ -1578,126 +1866,17 @@ void dispose() {
   super.dispose();
 }
 } // ← fermeture de _CarteScreenState
-// ── FORMULAIRE NOMMER ──
-class _NommerSheet extends StatefulWidget {
-  final LatLng latLng;
-  final void Function(String nom, String type, String description) onSubmit;
-  final VoidCallback onCancel;
-  const _NommerSheet({required this.latLng, required this.onSubmit, required this.onCancel});
-  @override
-  State<_NommerSheet> createState() => _NommerSheetState();
-}
 
- class _NommerSheetState extends State<_NommerSheet> {
-  final _nomController = TextEditingController();
-  final _descController = TextEditingController();
-  String _categorie = 'Localités';
-  String? _sousCategorie;
-final Map<String, IconData> _iconesS = {
-  // Localités
-  'Quartier': Icons.holiday_village,
-  'Sous-quartier': Icons.location_on,
-  'Village': Icons.cottage,
-  'Cité': Icons.apartment,
-  'Résidence': Icons.house,
-  'Campement': Icons.cabin,
-  'Hameau': Icons.location_on,
-  // Voirie
-  'Rue': Icons.turn_right,
-  'Avenue': Icons.add_road,
-  'Boulevard': Icons.add_road,
-  'Carrefour': Icons.swap_calls,
-  'Rond-point': Icons.roundabout_right,
-  'Impasse': Icons.block,
-  'Pont': Icons.directions,
-  'Passage': Icons.transfer_within_a_station,
-  // Lieux publics
-  'Mairie': Icons.account_balance,
-  'Préfecture': Icons.account_balance,
-  'Sous-préfecture': Icons.account_balance,
-  'Commissariat': Icons.local_police,
-  'Gendarmerie': Icons.local_police,
-  'Tribunal': Icons.gavel,
-  // Santé
-  'Hôpital': Icons.local_hospital,
-  'Clinique': Icons.medical_services,
-  'Centre de santé': Icons.health_and_safety,
-  'Pharmacie': Icons.medication,
-  'Cabinet médical': Icons.medical_services,
-  'Maternité': Icons.child_care,
-  // Éducation
-  'École primaire': Icons.school,
-  'Collège': Icons.school,
-  'Lycée': Icons.school,
-  'Université': Icons.account_balance,
-  'Centre de formation': Icons.cast_for_education,
-  'Bibliothèque': Icons.menu_book,
-  // Religion
-  'Église': Icons.church,
-  'Mosquée': Icons.mosque,
-  'Temple': Icons.temple_buddhist,
-  'Cathédrale': Icons.church,
-  'Paroisse': Icons.church,
-  // Transport
-  'Gare routière': Icons.directions_bus,
-  'Arrêt bus': Icons.bus_alert,
-  'Gare ferroviaire': Icons.train,
-  'Port': Icons.directions_boat,
-  'Aéroport': Icons.flight,
-  'Station taxi': Icons.local_taxi,
-  'Parking': Icons.local_parking,
-  // Restauration
-  'Maquis': Icons.local_bar,
-  'Restaurant': Icons.restaurant,
-  'Fast food': Icons.fastfood,
-  'Boulangerie': Icons.bakery_dining,
-  'Café': Icons.coffee,
-  'Bar': Icons.local_bar,
-  'Kiosque': Icons.store,
-  // Hébergement
-  'Hôtel': Icons.hotel,
-  'Auberge': Icons.house,
-  'Résidence': Icons.apartment,
-  'Pension': Icons.bed,
-  'Motel': Icons.hotel,
-  // Commerce
-  'Marché': Icons.storefront,
-  'Supermarché': Icons.shopping_cart,
-  'Boutique': Icons.store,
-  'Quincaillerie': Icons.hardware,
-  'Librairie': Icons.menu_book,
-  // Finance
-  'Banque': Icons.account_balance,
-  'Microfinance': Icons.savings,
-  'Mobile Money': Icons.phone_android,
-  'Bureau de change': Icons.currency_exchange,
-  'Assurance': Icons.security,
-  // Énergie
-  'Station essence': Icons.local_gas_station,
-  'Station GPL': Icons.local_gas_station,
-  'Groupe électrogène': Icons.electrical_services,
-  // Loisirs
-  'Stade': Icons.stadium,
-  'Terrain de foot': Icons.sports_soccer,
-  'Salle de sport': Icons.fitness_center,
-  'Cinéma': Icons.movie,
-  'Discothèque': Icons.nightlife,
-  'Parc': Icons.park,
-  // Nature
-  'Forêt': Icons.forest,
-  'Rivière': Icons.water,
-  'Lac': Icons.water,
-  'Colline': Icons.terrain,
-  'Plage': Icons.beach_access,
-  'Champ': Icons.grass,
-  'Plantation': Icons.nature,
-  // Agriculture
-  'Coopérative': Icons.group,
-  'Moulin': Icons.wind_power,
-  'Silo': Icons.warehouse,
-  'Ferme': Icons.agriculture,
-};
-final Map<String, IconData> _icones = {
+// Clé API MapTiler (fond de carte). Plan gratuit : 100k tuiles/mois.
+// À restreindre à l'app depuis le dashboard MapTiler avant publication.
+const String kMapTilerKey = 'bCEH6uKlS7Ah94RkjeYk';
+
+// ════════════════════════════════════════════════════════════════
+// SOURCE UNIQUE des catégories → sous-catégories (icônes incluses).
+// Utilisée par : la barre de filtres, les marqueurs de la carte ET le
+// formulaire « Nommer un lieu ». Tout ajout/modif se fait ICI uniquement.
+// ════════════════════════════════════════════════════════════════
+const Map<String, IconData> kCategorieIcones = {
   'Localités': Icons.location_city,
   'Voirie': Icons.add_road,
   'Lieux publics': Icons.account_balance,
@@ -1714,22 +1893,148 @@ final Map<String, IconData> _icones = {
   'Nature': Icons.park,
   'Agriculture': Icons.grass,
 };
+const Map<String, Map<String, IconData>> kSousCategories = {
+  'Localités': {
+    'Quartier': Icons.holiday_village,
+    'Sous-quartier': Icons.location_on,
+    'Village': Icons.cottage,
+    'Cité': Icons.apartment,
+    'Résidence': Icons.house,
+    'Campement': Icons.cabin,
+    'Hameau': Icons.location_on,
+  },
+  'Voirie': {
+    'Rue': Icons.turn_right,
+    'Avenue': Icons.add_road,
+    'Boulevard': Icons.add_road,
+    'Carrefour': Icons.swap_calls,
+    'Rond-point': Icons.roundabout_right,
+    'Impasse': Icons.block,
+    'Pont': Icons.directions,
+    'Passage': Icons.transfer_within_a_station,
+  },
+  'Lieux publics': {
+    'Mairie': Icons.account_balance,
+    'Préfecture': Icons.account_balance,
+    'Sous-préfecture': Icons.account_balance,
+    'Commissariat': Icons.local_police,
+    'Gendarmerie': Icons.local_police,
+    'Tribunal': Icons.gavel,
+  },
+  'Santé': {
+    'Hôpital': Icons.local_hospital,
+    'Clinique': Icons.medical_services,
+    'Centre de santé': Icons.health_and_safety,
+    'Pharmacie': Icons.medication,
+    'Cabinet médical': Icons.medical_services,
+    'Maternité': Icons.child_care,
+  },
+  'Éducation': {
+    'École primaire': Icons.school,
+    'Collège': Icons.school,
+    'Lycée': Icons.school,
+    'Université': Icons.account_balance,
+    'Centre de formation': Icons.cast_for_education,
+    'Bibliothèque': Icons.menu_book,
+  },
+  'Religion': {
+    'Église': Icons.church,
+    'Mosquée': Icons.mosque,
+    'Temple': Icons.temple_buddhist,
+    'Cathédrale': Icons.church,
+    'Paroisse': Icons.church,
+  },
+  'Transport': {
+    'Gare routière': Icons.directions_bus,
+    'Arrêt bus': Icons.bus_alert,
+    'Gare ferroviaire': Icons.train,
+    'Port': Icons.directions_boat,
+    'Aéroport': Icons.flight,
+    'Station taxi': Icons.local_taxi,
+    'Parking': Icons.local_parking,
+  },
+  'Restauration': {
+    'Maquis': Icons.local_bar,
+    'Restaurant': Icons.restaurant,
+    'Fast food': Icons.fastfood,
+    'Boulangerie': Icons.bakery_dining,
+    'Café': Icons.coffee,
+    'Bar': Icons.local_bar,
+    'Kiosque': Icons.store,
+  },
+  'Hébergement': {
+    'Hôtel': Icons.hotel,
+    'Auberge': Icons.house,
+    'Résidence': Icons.apartment,
+    'Pension': Icons.bed,
+    'Motel': Icons.hotel,
+  },
+  'Commerce': {
+    'Marché': Icons.storefront,
+    'Supermarché': Icons.shopping_cart,
+    'Boutique': Icons.store,
+    'Quincaillerie': Icons.hardware,
+    'Librairie': Icons.menu_book,
+  },
+  'Finance': {
+    'Banque': Icons.account_balance,
+    'Microfinance': Icons.savings,
+    'Mobile Money': Icons.phone_android,
+    'Bureau de change': Icons.currency_exchange,
+    'Assurance': Icons.security,
+  },
+  'Énergie': {
+    'Station essence': Icons.local_gas_station,
+    'Station GPL': Icons.local_gas_station,
+    'Groupe électrogène': Icons.electrical_services,
+  },
+  'Loisirs': {
+    'Stade': Icons.stadium,
+    'Terrain de foot': Icons.sports_soccer,
+    'Salle de sport': Icons.fitness_center,
+    'Cinéma': Icons.movie,
+    'Discothèque': Icons.nightlife,
+    'Parc': Icons.park,
+  },
+  'Nature': {
+    'Forêt': Icons.forest,
+    'Rivière': Icons.water,
+    'Lac': Icons.water,
+    'Colline': Icons.terrain,
+    'Plage': Icons.beach_access,
+    'Champ': Icons.grass,
+    'Plantation': Icons.nature,
+  },
+  'Agriculture': {
+    'Coopérative': Icons.group,
+    'Moulin': Icons.wind_power,
+    'Silo': Icons.warehouse,
+    'Ferme': Icons.agriculture,
+  },
+};
+// ── FORMULAIRE NOMMER ──
+class _NommerSheet extends StatefulWidget {
+  final LatLng latLng;
+  final void Function(String nom, String type, String description) onSubmit;
+  final VoidCallback onCancel;
+  const _NommerSheet({required this.latLng, required this.onSubmit, required this.onCancel});
+  @override
+  State<_NommerSheet> createState() => _NommerSheetState();
+}
+
+ class _NommerSheetState extends State<_NommerSheet> {
+  final _nomController = TextEditingController();
+  final _descController = TextEditingController();
+  String _categorie = 'Localités';
+  String? _sousCategorie;
+  // Dérivés de la source unique (rétro-compatibilité du code existant).
+final Map<String, IconData> _icones = kCategorieIcones;
+final Map<String, IconData> _iconesS = {
+  for (final subs in kSousCategories.values) ...subs,
+};
+  // Catégories du formulaire = source unique (catégorie → liste des sous-catégories)
   final Map<String, List<String>> _categories = {
-    'Localités': ['Quartier', 'Sous-quartier', 'Village', 'Cité', 'Résidence', 'Campement', 'Hameau'],
-    'Voirie': ['Rue', 'Avenue', 'Boulevard', 'Carrefour', 'Rond-point', 'Impasse', 'Pont', 'Passage'],
-    'Lieux publics': ['Mairie', 'Préfecture', 'Sous-préfecture', 'Commissariat', 'Gendarmerie', 'Tribunal'],
-    'Santé': ['Hôpital', 'Clinique', 'Centre de santé', 'Pharmacie', 'Cabinet médical', 'Maternité'],
-    'Éducation': ['École primaire', 'Collège', 'Lycée', 'Université', 'Centre de formation', 'Bibliothèque'],
-    'Religion': ['Église', 'Mosquée', 'Temple', 'Cathédrale', 'Paroisse'],
-    'Transport': ['Gare routière', 'Arrêt bus', 'Gare ferroviaire', 'Port', 'Aéroport', 'Station taxi', 'Parking'],
-    'Restauration': ['Maquis', 'Restaurant', 'Fast food', 'Boulangerie', 'Café', 'Bar', 'Kiosque'],
-    'Hébergement': ['Hôtel', 'Auberge', 'Résidence', 'Pension', 'Motel'],
-    'Commerce': ['Marché', 'Supermarché', 'Boutique', 'Quincaillerie', 'Librairie'],
-    'Finance': ['Banque', 'Microfinance', 'Mobile Money', 'Bureau de change', 'Assurance'],
-    'Énergie': ['Station essence', 'Station GPL', 'Groupe électrogène'],
-    'Loisirs': ['Stade', 'Terrain de foot', 'Salle de sport', 'Cinéma', 'Discothèque', 'Parc'],
-    'Nature': ['Forêt', 'Rivière', 'Lac', 'Colline', 'Plage', 'Champ', 'Plantation'],
-    'Agriculture': ['Coopérative', 'Moulin', 'Silo', 'Ferme'],
+    for (final e in kSousCategories.entries) e.key: e.value.keys.toList(),
   };
 
   @override
@@ -2229,6 +2534,60 @@ class ProfilScreen extends StatefulWidget {
 }
 
 class _ProfilScreenState extends State<ProfilScreen> {
+  Future<void> _partagerPosition() async {
+    // 1. Vérifier que la localisation est activée
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Active la localisation pour partager ta position.')),
+      );
+      return;
+    }
+
+    // 2. Gérer les permissions
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Permission de localisation refusée.')),
+      );
+      return;
+    }
+
+    try {
+      // 3. Récupérer la position GPS actuelle
+      final Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // 4. Générer le lien Google Maps
+      final String lien =
+          'https://maps.google.com/?q=${pos.latitude},${pos.longitude}';
+
+      // 5. Ouvrir le menu de partage natif (Android + iOS/iPad)
+      if (!mounted) return;
+      final RenderBox? box = context.findRenderObject() as RenderBox?;
+      await Share.share(
+        'Voici ma position : $lien',
+        subject: 'Ma position ZoWay',
+        // Requis sur iPad/iOS : l'origine du popover doit être non nulle,
+        // sinon la feuille de partage ne s'affiche pas (PlatformException).
+        sharePositionOrigin: box != null
+            ? box.localToGlobal(Offset.zero) & box.size
+            : null,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Impossible de récupérer la position : $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -2380,6 +2739,25 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 ]),
               ),
             ]),
+          ),
+          const SizedBox(height: 16),
+
+          // Bouton Partager ma position
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6B00),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _partagerPosition,
+              icon: const Icon(Icons.share_location),
+              label: const Text('Partager ma position',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -2702,4 +3080,22 @@ class _PinTailPainter extends CustomPainter {
   }
   @override
   bool shouldRepaint(_PinTailPainter old) => old.color != color;
+}
+
+// Pointe de bulle dirigée vers la GAUCHE (apex à gauche, base à droite).
+class _LeftTailPainter extends CustomPainter {
+  final Color color;
+  _LeftTailPainter(this.color);
+  @override
+  void paint(ui.Canvas canvas, ui.Size size) {
+    final paint = ui.Paint()..color = color;
+    final path = ui.Path()
+      ..moveTo(0, size.height / 2)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+  @override
+  bool shouldRepaint(_LeftTailPainter old) => old.color != color;
 }
